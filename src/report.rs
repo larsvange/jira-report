@@ -64,7 +64,7 @@ fn write_worklogs_tab(
         ws.write(r, 0, &wl.issue_key)?;
         ws.write(r, 1, &wl.issue_summary)?;
         ws.write(r, 2, &wl.author)?;
-        ws.write_with_format(r, 3, wl.date, date_fmt)?;
+        ws.write_with_format(r, 3, &wl.date, date_fmt)?;
         ws.write_with_format(r, 4, wl.hours, num)?;
         ws.write(r, 5, &wl.comment)?;
     }
@@ -184,7 +184,7 @@ fn write_hierarchy(
 
     let mut row = 1u32;
 
-    let mut write_epic_group = |ws: &mut rust_xlsxwriter::Worksheet,
+    let write_epic_group = |ws: &mut rust_xlsxwriter::Worksheet,
                                  epic: Option<&IssueNode>,
                                  children: &[&IssueNode],
                                  row: &mut u32|
@@ -237,12 +237,12 @@ fn write_hierarchy(
     sorted_epics.sort_by_key(|e| e.key.as_str());
 
     for epic in &sorted_epics {
-        let children = by_epic.remove(Some(epic.key.as_str())).unwrap_or_default();
+        let children = by_epic.remove(&Some(epic.key.as_str())).unwrap_or_default();
         write_epic_group(ws, Some(epic), &children, &mut row)?;
     }
 
     // Orphans (no matching epic node found)
-    let orphans = by_epic.remove(None).unwrap_or_default();
+    let orphans = by_epic.remove(&(None::<&str>)).unwrap_or_default();
     if !orphans.is_empty() {
         write_epic_group(ws, None, &orphans, &mut row)?;
     }

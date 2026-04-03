@@ -1,7 +1,6 @@
 mod jira;
 mod report;
 
-use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
 
@@ -12,7 +11,7 @@ use axum::{
     routing::{get, post},
     Form, Json, Router,
 };
-use chrono::NaiveDate;
+use chrono::{Datelike, NaiveDate};
 use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
 use tera::Tera;
@@ -382,8 +381,8 @@ async fn main() {
     let app = Router::new()
         .route("/", get(index_handler))
         .route("/generate", post(generate_handler))
-        .route("/status/:id", get(status_handler))
-        .route("/download/:id", get(download_handler))
+        .route("/status/{id}", get(status_handler))
+        .route("/download/{id}", get(download_handler))
         .with_state(state);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], port));

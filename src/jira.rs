@@ -1,6 +1,6 @@
 use chrono::NaiveDate;
 use reqwest::Client;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tracing::warn;
 
@@ -27,7 +27,7 @@ pub enum JiraError {
 // API response types
 // ---------------------------------------------------------------------------
 
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct Project {
     pub key: String,
     pub name: String,
