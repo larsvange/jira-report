@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jira Time Report</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 540px; margin: 60px auto; padding: 0 20px; color: #1a1a1a; }
+    h1 { font-size: 1.5rem; margin-bottom: 1.5rem; }
+    label { display: block; font-size: 0.875rem; font-weight: 600; margin-bottom: 4px; margin-top: 16px; }
+    select, input[type="date"] { width: 100%; padding: 8px 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 1rem; box-sizing: border-box; }
+    button { margin-top: 24px; width: 100%; padding: 10px; background: #0052cc; color: #fff; border: none; border-radius: 6px; font-size: 1rem; cursor: pointer; }
+    button:disabled { background: #aaa; cursor: not-allowed; }
+    #status-area { margin-top: 24px; padding: 12px 16px; border-radius: 6px; display: none; }
+    #status-area.running { background: #e6f0ff; border: 1px solid #0052cc; color: #0052cc; }
+    #status-area.done    { background: #e3fcef; border: 1px solid #00875a; color: #00875a; }
+    #status-area.error   { background: #ffebe6; border: 1px solid #de350b; color: #de350b; }
+    a.download-link { display: inline-block; margin-top: 8px; font-weight: 600; color: #00875a; }
+  </style>
+</head>
+<body>
+  <h1>Jira Time Report</h1>
+
+  <form id="report-form">
+    <label for="project_key">Project</label>
+    <select id="project_key" name="project_key" required>
+      {% for project in projects %}
+      <option value="{{ project.key }}">{{ project.name }} ({{ project.key }})</option>
+      {% endfor %}
+    </select>
+
+    <label for="start_date">Start date</label>
+    <input type="date" id="start_date" name="start_date" value="{{ default_start }}" required>
+
+    <label for="end_date">End date</label>
+    <input type="date" id="end_date" name="end_date" value="{{ default_end }}" required>
+
+    <button type="submit" id="submit-btn">Generate report</button>
+  </form>
+
+  <div id="status-area" role="status"></div>
+
+  <script>
+    const form = document.getElementById('report-form');
+    const btn  = document.getElementById('submit-btn');
+    const area = document.getElementById('status-area');
+
+    function showStatus(cls, html) {
+      area.className = cls;
+      area.innerHTML = html;
+      area.style.display = 'block';
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      btn.disabled = true;
+      showStatus('running', 'Submitting...');
+
+      const body = new URLSearchParams(new FormData(form));
+      let res;
+      try {
+        res = await fetch('/generate', { method: 'POST', body });
+      } catch (err) {
+        showStatus('error', 'Network error: ' + err.message);
+        btn.disabled = false;
+        return;
+      }
+
+      const data = await res.json();
+      if (!res.ok) {
+        showStatus('error', data.error || 'Unknown error');
+        btn.disabled = false;
+        return;
+      }
+
+      const jobId = data.job_id;
+      poll(jobId);
+    });
+
+    async function poll(jobId) {
+      let res, data;
+      try {
+        res  = await fetch('/status/' + jobId);
+        data = await res.json();
+      } catch (err) {
+        showStatus('error', 'Network error while polling: ' + err.message);
+        btn.disabled = false;
+        return;
+      }
+
+      const msg = data.message ? ' — ' + data.message : '';
+
+      if (data.status === 'done') {
+        showStatus('done',
+          'Report ready! <a class="download-link" href="/download/' + jobId + '">Download .xlsx</a>');
+        btn.disabled = false;
+      } else if (data.status === 'error') {
+        showStatus('error', 'Error' + msg);
+        btn.disabled = false;
+      } else {
+        showStatus('running', (data.status === 'running' ? 'Generating' : 'Queued') + msg + '…');
+        setTimeout(() => poll(jobId), 2000);
+      }
+    }
+  </script>
+</body>
+</html>
