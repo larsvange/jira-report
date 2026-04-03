@@ -77,8 +77,6 @@ struct IssueSearchResponse {
 #[serde(rename_all = "camelCase")]
 struct WorklogResponse {
     worklogs: Vec<JiraWorklogRaw>,
-    start_at: u32,
-    max_results: u32,
     total: u32,
 }
 

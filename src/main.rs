@@ -294,7 +294,6 @@ async fn run_job(
             issue_type: issue.fields.issuetype.name.clone(),
             parent_key: issue.fields.parent.as_ref().map(|p| p.key.clone()),
             epic_key,
-            total_hours: 0.0,
         });
     }
 

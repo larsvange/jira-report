@@ -14,7 +14,6 @@ pub struct IssueNode {
     pub issue_type: String,
     pub parent_key: Option<String>,
     pub epic_key: Option<String>,
-    pub total_hours: f64,
 }
 
 // ---------------------------------------------------------------------------
