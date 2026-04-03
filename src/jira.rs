@@ -70,9 +70,7 @@ pub struct ParentRef {
 #[serde(rename_all = "camelCase")]
 struct IssueSearchResponse {
     issues: Vec<Issue>,
-    start_at: u32,
-    max_results: u32,
-    total: u32,
+    next_page_token: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -208,20 +206,23 @@ impl JiraClient {
         let fields = "summary,issuetype,parent,customfield_10014";
         let page_size = 100u32;
         let mut all = Vec::new();
-        let mut start_at = 0u32;
+        let mut next_page_token: Option<String> = None;
         loop {
-            let url = format!(
-                "{}/rest/api/3/search?jql={}&startAt={start_at}&maxResults={page_size}&fields={fields}",
+            let mut url = format!(
+                "{}/rest/api/3/search/jql?jql={}&maxResults={page_size}&fields={fields}",
                 self.base_url,
                 urlencoding::encode(&jql),
             );
+            if let Some(token) = &next_page_token {
+                url.push_str(&format!("&nextPageToken={token}"));
+            }
             let page: IssueSearchResponse = self.get_json(&url).await?;
-            let fetched = page.issues.len() as u32;
+            let fetched = page.issues.len();
             all.extend(page.issues);
-            if start_at + fetched >= page.total || fetched == 0 {
+            next_page_token = page.next_page_token;
+            if fetched == 0 || next_page_token.is_none() {
                 break;
             }
-            start_at += page_size;
         }
         Ok(all)
     }
