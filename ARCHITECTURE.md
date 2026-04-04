@@ -10,13 +10,13 @@
 |-------|---------|-----------|
 | `axum` | `0.8` | Latest stable (0.8.8). Uses native async traits (no `#[async_trait]` macro). Includes `State` extractor for shared app state. |
 | `tokio` | `1` | Async runtime. `features = ["full"]` enables `rt-multi-thread`, `macros`, `time` (needed for sleep in retry). |
-| `reqwest` | `0.13` | Latest stable (0.13.2). HTTP client with native `json()` deserialization. |
+| `reqwest` | `0.12` | HTTP client with native `json()` deserialization. |
 | `tera` | `1` | Jinja2-style template engine. Stable at 1.x; simple API for the single page. |
-| `rust_xlsxwriter` | `0.94` | Latest (0.94.0). Pure Rust, no C deps. `save_to_buffer()` returns `Vec<u8>` for in-memory workbook serialization. |
+| `rust_xlsxwriter` | `0.79` | Pure Rust, no C deps. `save_to_buffer()` returns `Vec<u8>` for in-memory workbook serialization. `features = ["chrono"]` enables `NaiveDate` → `IntoExcelData`. |
 | `tower-http` | `0.6` | Middleware for Axum. `features = ["fs"]` for potential static file serving. Aligned with axum 0.8. |
 | `dashmap` | `6` | Lock-free concurrent HashMap. Avoids `Mutex` contention on the job store for concurrent status polls. |
 | `serde` / `serde_json` | `1` | De/serialization. Ubiquitous, stable. |
-| `uuid` | `1` | `features = ["v4"]` for random job IDs. |
+| `uuid` | `1` | `features = ["v4", "serde"]` for random job IDs and `DeserializeOwned` support required by Axum's `Path<Uuid>` extractor. |
 | `chrono` | `0.4` | Date parsing and arithmetic. `features = ["serde"]` for deserializing date strings. |
 | `dotenvy` | `0.15` | Loads `.env` file in development. Maintained fork of `dotenv`. |
 | `thiserror` | `2` | Derive macro for custom error types. |
@@ -52,7 +52,7 @@ Browser                          Axum Server                     Jira Cloud API
   │                                  │                                │
   │  GET /status/:id  (poll loop)   │     [async task running]       │
   │─────────────────────────────────>│                                │
-  │  { "status":"running",           │  GET /rest/api/3/search        │
+  │  { "status":"running",           │  GET /rest/api/3/search/jql    │
   │    "message":"Fetching..."}      │───────────────────────────────>│
   │<─────────────────────────────────│<───────────────────────────────│
   │         ...repeat...             │                                │
@@ -152,14 +152,12 @@ pub struct Project {
     pub name: String,
 }
 
-// GET /rest/api/3/search (JQL issue search)
+// GET /rest/api/3/search/jql (JQL issue search — cursor-based pagination)
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct IssueSearchResponse {
     pub issues: Vec<Issue>,
-    pub start_at: u32,
-    pub max_results: u32,
-    pub total: u32,
+    pub next_page_token: Option<String>,
 }
 
 #[derive(Deserialize, Clone)]
@@ -194,8 +192,6 @@ pub struct ParentRef {
 #[serde(rename_all = "camelCase")]
 pub struct WorklogResponse {
     pub worklogs: Vec<JiraWorklog>,
-    pub start_at: u32,
-    pub max_results: u32,
     pub total: u32,
 }
 
@@ -240,7 +236,6 @@ pub struct IssueNode {
     pub issue_type: String,
     pub parent_key: Option<String>,    // from parent field
     pub epic_key: Option<String>,      // from epic_link or parent if type is Epic
-    pub total_hours: f64,
 }
 ```
 
@@ -271,7 +266,7 @@ pub struct IssueNode {
 |---------------|--------|
 | `JiraClient` struct | Holds `reqwest::Client` (reused connection pool), `base_url: String`, `email: String`, `api_token: String`. |
 | `fetch_projects()` | `GET {base}/rest/api/3/project/search?startAt=N&maxResults=50`. Paginates until `isLast == true`. Returns `Vec<Project>`. |
-| `search_issues()` | `GET {base}/rest/api/3/search?jql=...&startAt=N&maxResults=100&fields=summary,issuetype,parent,customfield_10014`. Paginates until `startAt + issues.len() >= total`. Returns `Vec<Issue>`. |
+| `search_issues()` | `GET {base}/rest/api/3/search/jql?jql=...&maxResults=100&fields=summary,issuetype,parent,customfield_10014`. Paginates using `nextPageToken` cursor until no token is returned. Returns `Vec<Issue>`. |
 | `fetch_worklogs()` | `GET {base}/rest/api/3/issue/{key}/worklog?startedAfter={ms}&startedBefore={ms}`. Paginates if `total > maxResults`. Filters entries to date range. Returns `Vec<JiraWorklog>`. |
 | Auth | Every request sets `Authorization: Basic base64(email:token)`. |
 | Error mapping | Maps reqwest errors and non-2xx to `JiraError` variants (Unauthorized, Forbidden, RateLimited, NotFound, Other). |

@@ -1,7 +1,7 @@
 # PRD: Jira Time Report Web App
 
-**Status:** Draft
-**Date:** 2026-04-03
+**Status:** Shipped (v1.0)
+**Date:** 2026-04-04
 **Stack:** Rust / Axum / Tera / reqwest / rust_xlsxwriter
 
 ---
