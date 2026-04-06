@@ -78,5 +78,5 @@ Three source files and one template:
 
 ## Development Best Practices
 
-- Use comments sparingly. Only comment complex code.
-- Ensure .env is never added or tacked by git
+- Only comment complex code
+- Ensure .env is never added or tracked by git
