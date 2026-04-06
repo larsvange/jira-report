@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, HashMap};
 
-use rust_xlsxwriter::{Format, Workbook, XlsxError};
+use rust_xlsxwriter::{Format, Formula, Workbook, XlsxError};
 
 use crate::jira::Worklog;
 
@@ -68,6 +68,15 @@ fn write_worklogs_tab(
         ws.write(r, 5, &wl.comment)?;
     }
 
+    let total_hours: f64 = worklogs.iter().map(|wl| wl.hours).sum();
+    let total_row = (worklogs.len() + 1) as u32;
+    ws.write_with_format(total_row, 3, "Total", bold)?;
+    ws.write_formula_with_format(
+        total_row, 4,
+        Formula::new(format!("=SUM(E2:E{})", worklogs.len() + 1)).set_result(total_hours.to_string()),
+        num,
+    )?;
+
     Ok(())
 }
 
@@ -98,6 +107,15 @@ fn write_summary_by_person(
         ws.write(r, 0, *author)?;
         ws.write_with_format(r, 1, *hours, num)?;
     }
+
+    let total_hours: f64 = totals.values().sum();
+    let total_row = (totals.len() + 1) as u32;
+    ws.write_with_format(total_row, 0, "Total", bold)?;
+    ws.write_formula_with_format(
+        total_row, 1,
+        Formula::new(format!("=SUM(B2:B{})", totals.len() + 1)).set_result(total_hours.to_string()),
+        num,
+    )?;
 
     Ok(())
 }
@@ -134,6 +152,15 @@ fn write_summary_by_issue(
         ws.write(r, 1, *summary)?;
         ws.write_with_format(r, 2, *hours, num)?;
     }
+
+    let total_hours: f64 = totals.values().map(|(_, h)| h).sum();
+    let total_row = (totals.len() + 1) as u32;
+    ws.write_with_format(total_row, 0, "Total", bold)?;
+    ws.write_formula_with_format(
+        total_row, 2,
+        Formula::new(format!("=SUM(C2:C{})", totals.len() + 1)).set_result(total_hours.to_string()),
+        num,
+    )?;
 
     Ok(())
 }

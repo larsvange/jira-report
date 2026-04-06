@@ -82,8 +82,8 @@ fn worklogs_tab_row_count() {
         wl("PROJ-2", "Add feature", "Bob", 3.0),
     ];
     let mut wb = parse(generate_workbook(&worklogs, &[]).unwrap());
-    // 1 header row + 2 data rows
-    assert_eq!(row_count(&mut wb, "Worklogs"), 3);
+    // 1 header row + 2 data rows + 1 total row
+    assert_eq!(row_count(&mut wb, "Worklogs"), 4);
 }
 
 #[test]
@@ -94,6 +94,42 @@ fn worklogs_tab_cell_values() {
     assert_eq!(cell_str(&mut wb, "Worklogs", 1, 1), "Fix bug");
     assert_eq!(cell_str(&mut wb, "Worklogs", 1, 2), "Alice");
     assert_eq!(cell_float(&mut wb, "Worklogs", 1, 4), 2.5);
+}
+
+#[test]
+fn worklogs_tab_has_total_row() {
+    let worklogs = vec![
+        wl("PROJ-1", "Fix bug", "Alice", 2.0),
+        wl("PROJ-2", "Add feature", "Bob", 3.0),
+    ];
+    let mut wb = parse(generate_workbook(&worklogs, &[]).unwrap());
+    // Total label is in col 3 (Date column), formula result in col 4 (Hours)
+    assert_eq!(cell_str(&mut wb, "Worklogs", 3, 3), "Total");
+    assert_eq!(cell_float(&mut wb, "Worklogs", 3, 4), 5.0);
+}
+
+#[test]
+fn summary_by_person_has_total_row() {
+    let worklogs = vec![
+        wl("PROJ-1", "Task", "Alice", 2.0),
+        wl("PROJ-2", "Task", "Bob", 3.0),
+    ];
+    let mut wb = parse(generate_workbook(&worklogs, &[]).unwrap());
+    // 2 authors → total row is row 3
+    assert_eq!(cell_str(&mut wb, "Summary by Person", 3, 0), "Total");
+    assert_eq!(cell_float(&mut wb, "Summary by Person", 3, 1), 5.0);
+}
+
+#[test]
+fn summary_by_issue_has_total_row() {
+    let worklogs = vec![
+        wl("PROJ-1", "Fix bug", "Alice", 2.0),
+        wl("PROJ-2", "Add feature", "Bob", 3.0),
+    ];
+    let mut wb = parse(generate_workbook(&worklogs, &[]).unwrap());
+    // 2 issues → total row is row 3
+    assert_eq!(cell_str(&mut wb, "Summary by Issue", 3, 0), "Total");
+    assert_eq!(cell_float(&mut wb, "Summary by Issue", 3, 2), 5.0);
 }
 
 #[test]
