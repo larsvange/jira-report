@@ -4,26 +4,25 @@
 
 ---
 
-## 1. Tech Stack & Version Pinning
+## 1. Tech Stack
 
-| Crate | Version | Rationale |
-|-------|---------|-----------|
-| `axum` | `0.8` | Latest stable (0.8.8). Uses native async traits (no `#[async_trait]` macro). Includes `State` extractor for shared app state. |
-| `tokio` | `1` | Async runtime. `features = ["full"]` enables `rt-multi-thread`, `macros`, `time` (needed for sleep in retry). |
-| `reqwest` | `0.12` | HTTP client with native `json()` deserialization. |
-| `tera` | `1` | Jinja2-style template engine. Stable at 1.x; simple API for the single page. |
-| `rust_xlsxwriter` | `0.79` | Pure Rust, no C deps. `save_to_buffer()` returns `Vec<u8>` for in-memory workbook serialization. `features = ["chrono"]` enables `NaiveDate` → `IntoExcelData`. |
-| `tower-http` | `0.6` | Middleware for Axum. `features = ["fs"]` for potential static file serving. Aligned with axum 0.8. |
-| `dashmap` | `6` | Lock-free concurrent HashMap. Avoids `Mutex` contention on the job store for concurrent status polls. |
-| `serde` / `serde_json` | `1` | De/serialization. Ubiquitous, stable. |
-| `uuid` | `1` | `features = ["v4", "serde"]` for random job IDs and `DeserializeOwned` support required by Axum's `Path<Uuid>` extractor. |
-| `chrono` | `0.4` | Date parsing and arithmetic. `features = ["serde"]` for deserializing date strings. |
-| `dotenvy` | `0.15` | Loads `.env` file in development. Maintained fork of `dotenv`. |
-| `thiserror` | `2` | Derive macro for custom error types. |
-| `tracing` / `tracing-subscriber` | `0.1` / `0.3` | Structured logging. `env-filter` feature for `RUST_LOG` control. |
+| Crate | Rationale |
+|-------|-----------|
+| `axum` | Web framework. Uses native async traits (no `#[async_trait]` macro). Includes `State` extractor for shared app state. |
+| `tokio` | Async runtime. `features = ["full"]` enables `rt-multi-thread`, `macros`, `time` (needed for sleep in retry). |
+| `reqwest` | HTTP client with native `json()` deserialization. |
+| `tera` | Jinja2-style template engine. Simple API for the single page. |
+| `rust_xlsxwriter` | Pure Rust, no C deps. `save_to_buffer()` returns `Vec<u8>` for in-memory workbook serialization. `features = ["chrono"]` enables `NaiveDate` → `IntoExcelData`. |
+| `tower-http` | Middleware for Axum. `features = ["fs"]` for potential static file serving. |
+| `dashmap` | Lock-free concurrent HashMap. Avoids `Mutex` contention on the job store for concurrent status polls. |
+| `serde` / `serde_json` | De/serialization. |
+| `uuid` | `features = ["v4", "serde"]` for random job IDs and `DeserializeOwned` support required by Axum's `Path<Uuid>` extractor. |
+| `chrono` | Date parsing and arithmetic. `features = ["serde"]` for deserializing date strings. |
+| `dotenvy` | Loads `.env` file in development. Maintained fork of `dotenv`. |
+| `thiserror` | Derive macro for custom error types. |
+| `tracing` / `tracing-subscriber` | Structured logging. `env-filter` feature for `RUST_LOG` control. |
 
-**Rust edition:** 2021 (or 2024 if stable by implementation time).
-**MSRV:** 1.77+ (required for axum 0.8 async trait support).
+**Rust edition:** 2021.
 
 ---
 
