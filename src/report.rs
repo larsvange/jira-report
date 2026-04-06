@@ -216,13 +216,21 @@ fn write_hierarchy(
                                  row: &mut u32|
      -> Result<(), XlsxError> {
         // Epic row
+        let child_total = |c: &&IssueNode| -> f64 {
+            let direct = hours_map.get(c.key.as_str()).copied().unwrap_or(0.0);
+            let sub_total: f64 = by_parent
+                .get(c.key.as_str())
+                .map(|subs| subs.iter().map(|s| hours_map.get(s.key.as_str()).copied().unwrap_or(0.0)).sum())
+                .unwrap_or(0.0);
+            direct + sub_total
+        };
         let (epic_key, epic_summary, epic_hours) = match epic {
             Some(e) => {
-                let h: f64 = children.iter().map(|c| hours_map.get(c.key.as_str()).copied().unwrap_or(0.0)).sum::<f64>()
+                let h: f64 = children.iter().map(child_total).sum::<f64>()
                     + hours_map.get(e.key.as_str()).copied().unwrap_or(0.0);
                 (e.key.as_str(), e.summary.as_str(), h)
             }
-            None => ("(No Epic)", "(No Epic)", children.iter().map(|c| hours_map.get(c.key.as_str()).copied().unwrap_or(0.0)).sum()),
+            None => ("(No Epic)", "(No Epic)", children.iter().map(child_total).sum()),
         };
 
         ws.write_with_format(*row, 0, epic_key, bold)?;

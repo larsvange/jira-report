@@ -174,10 +174,10 @@ fn hierarchy_epic_rolls_up_hours() {
         node("PROJ-3", "Sub-task 1", "Sub-task", Some("PROJ-2"), Some("EPIC-1")),
     ];
     let mut wb = parse(generate_workbook(&worklogs, &issues).unwrap());
-    // Row 1: epic row — total is sum of direct hours on immediate children only (not sub-tasks)
-    // PROJ-2 has 3.0 direct hours; PROJ-3's 2.0 hours are not rolled up to the epic
+    // Row 1: epic row — total includes sub-task hours rolled up through stories
+    // PROJ-2 has 3.0 direct hours + PROJ-3 (sub-task) has 2.0 hours = 5.0
     assert_eq!(cell_str(&mut wb, "Hierarchy", 1, 0), "EPIC-1");
-    assert_eq!(cell_float(&mut wb, "Hierarchy", 1, 3), 3.0);
+    assert_eq!(cell_float(&mut wb, "Hierarchy", 1, 3), 5.0);
 }
 
 #[test]
