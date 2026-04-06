@@ -16,7 +16,7 @@ Teams using Jira need periodic time reports to track logged hours per person and
 
 1. Any team member can generate a time report for any Jira project without needing CLI access or local tooling.
 2. Report generation is non-blocking — the browser remains usable while the job runs.
-3. The Excel output is structurally identical to the existing `jira-timereport` skill (4 tabs, same schema), so existing consumers of that report don't need to change.
+3. The Excel output is similar to the first 3 tabs of the existing `jira-timereport` skill, so existing consumers of that report don't need to change.
 4. The app starts with a single `cargo run` and zero manual configuration beyond environment variables.
 5. The full round-trip from page load to download completes in under 60 seconds for projects with up to 500 issues.
 
