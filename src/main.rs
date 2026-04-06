@@ -253,7 +253,6 @@ async fn run_job(
 
     let total = issues.len();
     let mut all_worklogs = Vec::new();
-    let mut issue_nodes = Vec::new();
 
     for (i, issue) in issues.iter().enumerate() {
         set_status(
@@ -275,31 +274,11 @@ async fn run_job(
                 error!("Worklog fetch failed for {}: {e}", issue.key);
             }
         }
-
-        let epic_key = issue
-            .fields
-            .epic_link
-            .clone()
-            .or_else(|| {
-                if issue.fields.issuetype.name == "Epic" {
-                    Some(issue.key.clone())
-                } else {
-                    None
-                }
-            });
-
-        issue_nodes.push(report::IssueNode {
-            key: issue.key.clone(),
-            summary: issue.fields.summary.clone(),
-            issue_type: issue.fields.issuetype.name.clone(),
-            parent_key: issue.fields.parent.as_ref().map(|p| p.key.clone()),
-            epic_key,
-        });
     }
 
     set_status(&state.jobs, job_id, JobStatus::Running, Some("Generating Excel workbook…".into()));
 
-    match report::generate_workbook(&all_worklogs, &issue_nodes) {
+    match report::generate_workbook(&all_worklogs) {
         Ok(bytes) => {
             if let Some(mut job) = state.jobs.get_mut(&job_id) {
                 job.status = JobStatus::Done;

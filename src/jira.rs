@@ -50,20 +50,12 @@ pub struct Issue {
 pub struct IssueFields {
     pub summary: String,
     pub issuetype: IssueType,
-    pub parent: Option<ParentRef>,
-    #[serde(rename = "customfield_10014")]
-    pub epic_link: Option<String>,
 }
 
 #[derive(Deserialize, Clone)]
 pub struct IssueType {
     pub name: String,
     pub subtask: bool,
-}
-
-#[derive(Deserialize, Clone)]
-pub struct ParentRef {
-    pub key: String,
 }
 
 #[derive(Deserialize)]
@@ -201,7 +193,7 @@ impl JiraClient {
         let jql = format!(
             "project = \"{project_key}\" AND worklogDate >= \"{start}\" AND worklogDate <= \"{end}\" ORDER BY key ASC"
         );
-        let fields = "summary,issuetype,parent,customfield_10014";
+        let fields = "summary,issuetype";
         let page_size = 100u32;
         let mut all = Vec::new();
         let mut next_page_token: Option<String> = None;

@@ -22,11 +22,17 @@ cargo fmt
 
 # Check for known dependency vulnerabilities
 cargo audit
+
+# Run all tests
+cargo test
+
+# Run a single test
+cargo test test_name_here
 ```
 
-There are no automated tests yet. When adding them, run a single test with:
+After modifying code, run all tests to ensure nothing broke:
 ```bash
-cargo test test_name_here
+cargo test
 ```
 
 ## Environment
@@ -51,16 +57,15 @@ Three source files and one template:
 - `POST /generate` returns a UUID immediately, then `tokio::spawn`s `run_job` which drives the full Jira fetch → Excel pipeline and updates `JobState` in place.
 - A background cleanup task (`tokio::spawn` at startup) evicts jobs older than 1 hour every 5 minutes.
 
-**`src/jira.rs`** — `JiraClient` wrapping `reqwest`. All three public methods paginate automatically and retry on HTTP 429 (up to 3 times, honouring `Retry-After`):
+**`src/jira.rs`** — `JiraClient` wrapping `reqwest`. Public methods paginate automatically and retry on HTTP 429 (up to 3 times, honouring `Retry-After`):
 - `fetch_projects()` — `GET /rest/api/3/project/search`
-- `search_issues(project, start, end)` — JQL search; requests `summary`, `issuetype`, `parent`, `customfield_10014` (epic link)
+- `search_issues(project, start, end)` — JQL search; requests `summary`, `issuetype`
 - `fetch_worklogs(issue_key, start, end)` — `GET /rest/api/3/issue/{key}/worklog`; Jira v3 returns comments as ADF (Atlassian Document Format JSON), converted to plain text by `extract_adf_text`.
 
-**`src/report.rs`** — Pure function `generate_workbook(&[Worklog], &[IssueNode]) -> Result<Vec<u8>>` using `rust_xlsxwriter`. Produces a 4-tab workbook in memory:
+**`src/report.rs`** — Pure function `generate_workbook(&[Worklog]) -> Result<Vec<u8>>` using `rust_xlsxwriter`. Produces a 3-tab workbook in memory:
 1. **Worklogs** — one row per raw worklog entry
 2. **Summary by Person** — `BTreeMap` aggregation, alphabetical
 3. **Summary by Issue** — `BTreeMap` aggregation, sorted by issue key
-4. **Hierarchy** — three-level tree (Epic → Story/Task → Sub-task); orphan issues (no epic) grouped under "(No Epic)"; epic rows are bold with rolled-up hours
 
 **`templates/index.html`** — Single Tera template. Receives `projects`, `default_start`, `default_end` from the index handler. Contains all polling JS inline: submits the form via `fetch()`, polls `/status/:id` every 2 seconds, and renders a download link on completion.
 
@@ -68,7 +73,6 @@ Three source files and one template:
 
 - **`DashMap` over `Mutex<HashMap>`**: `/status/:id` is polled frequently; sharded locking avoids contention between concurrent jobs.
 - **Sequential worklog fetching** in `run_job`: issues are iterated one-by-one to avoid Jira rate limits. Progress messages (`"Fetching worklogs for issue N/total…"`) are written to `JobState.message` at each step.
-- **`customfield_10014`**: standard Jira Cloud field for the epic link. If your instance uses a different field ID, update `IssueFields` in `jira.rs` and the JQL `fields` parameter in `search_issues`.
 - **Worklog `issue_key`/`issue_summary` are set by the caller** (`run_job`), not inside `fetch_worklogs`, since the worklog API response doesn't include issue metadata.
 - **`Tera` is loaded once at startup** from `templates/**/*` and is read-only thereafter — safe to share across handlers without locking.
 
