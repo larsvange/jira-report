@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use rust_xlsxwriter::{Format, Formula, Workbook, XlsxError};
 
-use crate::jira::Worklog;
+use crate::jira::{Issue, Worklog};
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -13,7 +13,7 @@ use crate::jira::Worklog;
 // Entry point
 // ---------------------------------------------------------------------------
 
-pub fn generate_workbook(worklogs: &[Worklog]) -> Result<Vec<u8>, XlsxError> {
+pub fn generate_workbook(worklogs: &[Worklog], issues: &[Issue]) -> Result<Vec<u8>, XlsxError> {
     let mut wb = Workbook::new();
 
     // Formats
@@ -23,7 +23,7 @@ pub fn generate_workbook(worklogs: &[Worklog]) -> Result<Vec<u8>, XlsxError> {
 
     write_worklogs_tab(&mut wb, worklogs, &bold, &num, &date)?;
     write_summary_by_person(&mut wb, worklogs, &bold, &num)?;
-    write_summary_by_issue(&mut wb, worklogs, &bold, &num)?;
+    write_summary_by_issue(&mut wb, worklogs, issues, &bold, &num)?;
 
     wb.save_to_buffer()
 }
@@ -116,6 +116,7 @@ fn write_summary_by_person(
 fn write_summary_by_issue(
     wb: &mut Workbook,
     worklogs: &[Worklog],
+    issues: &[Issue],
     bold: &Format,
     num: &Format,
 ) -> Result<(), XlsxError> {
@@ -123,8 +124,22 @@ fn write_summary_by_issue(
     ws.set_name("Summary by Issue")?;
 
     ws.write_with_format(0, 0, "Issue Key", bold)?;
-    ws.write_with_format(0, 1, "Issue Summary", bold)?;
-    ws.write_with_format(0, 2, "Total Hours", bold)?;
+    ws.write_with_format(0, 1, "Issue Type", bold)?;
+    ws.write_with_format(0, 2, "Parent", bold)?;
+    ws.write_with_format(0, 3, "Issue Summary", bold)?;
+    ws.write_with_format(0, 4, "Total Hours", bold)?;
+
+    // Build lookup: issue key → (issue_type, parent_key)
+    let issue_meta: std::collections::HashMap<&str, (&str, Option<&str>)> = issues
+        .iter()
+        .map(|i| (
+            i.key.as_str(),
+            (
+                i.fields.issuetype.name.as_str(),
+                i.fields.parent.as_ref().map(|p| p.key.as_str()),
+            ),
+        ))
+        .collect();
 
     // Aggregate preserving summary
     let mut totals: BTreeMap<&str, (&str, f64)> = BTreeMap::new();
@@ -137,17 +152,20 @@ fn write_summary_by_issue(
 
     for (row, (key, (summary, hours))) in totals.iter().enumerate() {
         let r = (row + 1) as u32;
+        let (issue_type, parent_key) = issue_meta.get(key).copied().unwrap_or(("", None));
         ws.write(r, 0, *key)?;
-        ws.write(r, 1, *summary)?;
-        ws.write_with_format(r, 2, *hours, num)?;
+        ws.write(r, 1, issue_type)?;
+        ws.write(r, 2, parent_key.unwrap_or(""))?;
+        ws.write(r, 3, *summary)?;
+        ws.write_with_format(r, 4, *hours, num)?;
     }
 
     let total_hours: f64 = totals.values().map(|(_, h)| h).sum();
     let total_row = (totals.len() + 1) as u32;
     ws.write_with_format(total_row, 0, "Total", bold)?;
     ws.write_formula_with_format(
-        total_row, 2,
-        Formula::new(format!("=SUM(C2:C{})", totals.len() + 1)).set_result(total_hours.to_string()),
+        total_row, 4,
+        Formula::new(format!("=SUM(E2:E{})", totals.len() + 1)).set_result(total_hours.to_string()),
         num,
     )?;
 

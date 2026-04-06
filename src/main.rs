@@ -278,7 +278,7 @@ async fn run_job(
 
     set_status(&state.jobs, job_id, JobStatus::Running, Some("Generating Excel workbook…".into()));
 
-    match report::generate_workbook(&all_worklogs) {
+    match report::generate_workbook(&all_worklogs, &issues) {
         Ok(bytes) => {
             if let Some(mut job) = state.jobs.get_mut(&job_id) {
                 job.status = JobStatus::Done;

@@ -50,6 +50,12 @@ pub struct Issue {
 pub struct IssueFields {
     pub summary: String,
     pub issuetype: IssueType,
+    pub parent: Option<IssueParent>,
+}
+
+#[derive(Deserialize, Clone)]
+pub struct IssueParent {
+    pub key: String,
 }
 
 #[derive(Deserialize, Clone)]
@@ -193,7 +199,7 @@ impl JiraClient {
         let jql = format!(
             "project = \"{project_key}\" AND worklogDate >= \"{start}\" AND worklogDate <= \"{end}\" ORDER BY key ASC"
         );
-        let fields = "summary,issuetype";
+        let fields = "summary,issuetype,parent";
         let page_size = 100u32;
         let mut all = Vec::new();
         let mut next_page_token: Option<String> = None;
