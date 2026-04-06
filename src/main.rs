@@ -1,5 +1,5 @@
-mod jira;
-mod report;
+use jira_report::jira;
+use jira_report::report;
 
 use std::net::SocketAddr;
 use std::sync::Arc;

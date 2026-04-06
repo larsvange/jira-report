@@ -3,6 +3,10 @@ name = "jira-report"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+name = "jira_report"
+path = "src/lib.rs"
+
 [[bin]]
 name = "jira-report"
 path = "src/main.rs"
@@ -12,8 +16,8 @@ axum = "0.8"
 tokio = { version = "1", features = ["full"] }
 tower-http = { version = "0.6", features = ["fs"] }
 tera = "1"
-reqwest = { version = "0.12", features = ["json"] }
-rust_xlsxwriter = { version = "0.79", features = ["chrono"] }
+reqwest = { version = "0.13", features = ["json"] }
+rust_xlsxwriter = { version = "0.94", features = ["chrono"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 uuid = { version = "1", features = ["v4", "serde"] }
@@ -24,3 +28,6 @@ thiserror = "2"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 urlencoding = "2"
+
+[dev-dependencies]
+calamine = "0.26"
