@@ -72,10 +72,8 @@ struct IssueSearchResponse {
 }
 
 #[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
 struct WorklogResponse {
     worklogs: Vec<JiraWorklogRaw>,
-    total: u32,
 }
 
 #[derive(Deserialize)]
@@ -230,8 +228,19 @@ impl JiraClient {
         start: NaiveDate,
         end: NaiveDate,
     ) -> Result<Vec<Worklog>, JiraError> {
-        let started_after  = start.and_hms_opt(0, 0, 0).unwrap().and_utc().timestamp_millis();
-        let started_before = end.and_hms_opt(23, 59, 59).unwrap().and_utc().timestamp_millis();
+        // Expand the UTC window by one day on each side to cover all timezones
+        // (up to UTC±14). The secondary filter below re-applies the exact local-date
+        // boundary using the timezone offset embedded in the `started` string.
+        let started_after = start
+            .pred_opt().unwrap_or(start)
+            .and_hms_opt(0, 0, 0).unwrap()
+            .and_utc()
+            .timestamp_millis();
+        let started_before = end
+            .succ_opt().unwrap_or(end)
+            .and_hms_opt(23, 59, 59).unwrap()
+            .and_utc()
+            .timestamp_millis();
 
         let mut all_raw: Vec<JiraWorklogRaw> = Vec::new();
         let mut start_at = 0u32;
@@ -244,7 +253,7 @@ impl JiraClient {
             let page: WorklogResponse = self.get_json(&url).await?;
             let fetched = page.worklogs.len() as u32;
             all_raw.extend(page.worklogs);
-            if start_at + fetched >= page.total || fetched == 0 {
+            if fetched < page_size {
                 break;
             }
             start_at += page_size;
